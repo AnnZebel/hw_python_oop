@@ -11,19 +11,19 @@ class InfoMessage:
     speed: float
     calories: float
 
-    MSG_TRAINING_TYPE: str = 'Тип тренировки'
-    MSG_DURATION: str = 'Длительность'
-    MSG_DISTANCE: str = 'Дистанция'
-    MSG_SPEED: str = 'Ср. скорость'
-    MSG_CALORIES: str = 'Потрачено ккал'
+    MESSAGE_TEMPLATE = 'Тип тренировки: {training_type}; '\
+                       'Длительность: {duration:.3f} ч.; '\
+                       'Дистанция: {distance:.3f} км; '\
+                       'Ср. скорость: {speed:.3f} км/ч; '\
+                       'Потрачено ккал: {calories:.3f}.'
 
     def get_message(self) -> str:
         """Вывод сообщения о тренировке."""
-        return (f'{self.MSG_TRAINING_TYPE}: {self.training_type}; '
-                f'{self.MSG_DURATION}: {self.duration:.3f} ч.; '
-                f'{self.MSG_DISTANCE}: {self.distance:.3f} км; '
-                f'{self.MSG_SPEED}: {self.speed:.3f} км/ч; '
-                f'{self.MSG_CALORIES}: {self.calories:.3f}.')
+        return self.MESSAGE_TEMPLATE.format(training_type=self.training_type,
+                                            duration=self.duration,
+                                            distance=self.distance,
+                                            speed=self.speed,
+                                            calories=self.calories)
 
 
 class Training:
@@ -52,8 +52,8 @@ class Training:
 
     def get_spent_calories(self) -> float:
         """Получить количество затраченных калорий."""
-        raise NotImplementedError('Определите get_spent_calories'
-                                  ' в %s.' % (self.__class__.__name__))
+        raise NotImplementedError(f'Определите get_spent_calories в '
+                                  f'{self.__class__.__name__}')
 
     def show_training_info(self) -> InfoMessage:
         """Вернуть информационное сообщение о выполненной тренировке."""
@@ -81,9 +81,9 @@ class Running(Training):
 class SportsWalking(Training):
     """Тренировка: спортивная ходьба."""
 
-    COEFF_FOR_COUNT_CALORIES_1: float = 0.035
-    COEFF_FOR_COUNT_CALORIES_2: float = 0.029
-    AV_SPEED_IN_M_IN_SECOND: float = 0.278
+    CALORIES_WEIGHT_MULTIPLIER_1: float = 0.035
+    CALORIES_WEIGHT_MULTIPLIER_2: float = 0.029
+    MEAN_SPEED_IN_M_IN_SECOND: float = 0.278
     SM_IN_M: int = 100
 
     def __init__(self, action: int, duration: float,
@@ -93,10 +93,11 @@ class SportsWalking(Training):
 
     def get_spent_calories(self) -> float:
         """Получить количество затраченных калорий."""
-        return ((self.COEFF_FOR_COUNT_CALORIES_1 * self.weight
-                 + ((self.get_mean_speed() * self.AV_SPEED_IN_M_IN_SECOND) ** 2
+        return ((self.CALORIES_WEIGHT_MULTIPLIER_1 * self.weight
+                 + ((self.get_mean_speed()
+                     * self.MEAN_SPEED_IN_M_IN_SECOND) ** 2
                     / (self.height / self.SM_IN_M))
-                 * self.COEFF_FOR_COUNT_CALORIES_2 * self.weight)
+                 * self.CALORIES_WEIGHT_MULTIPLIER_2 * self.weight)
                 * (self.duration * self.MINUTES_IN_HOUR))
 
 
@@ -126,22 +127,19 @@ class Swimming(Training):
 
 def read_package(_workout_type: str, _data: list) -> Training:
     """Прочитать данные полученные от датчиков."""
-    try:
-        training_classes: dict[str, type[Training]] = {
-            'SWM': Swimming, 'RUN': Running, 'WLK': SportsWalking
-        }
+    training_types = {'SWM': Swimming, 'RUN': Running, 'WLK': SportsWalking}
+    if _workout_type in training_types:
+        training_classes: dict[str, type[Training]] = training_types
         return training_classes[_workout_type](*_data)
-    except KeyError as e:
-        print(f'Неверный тип тренировочного класса: {e}')
+    else:
+        raise ValueError(f'Неверный тип тренировочного класса - '
+                         f'{_workout_type}')
 
 
 def main(_training: Training) -> None:
     """Главная функция."""
-    try:
-        info = _training.show_training_info()
-        print(info.get_message())
-    except AttributeError:
-        pass
+    info = _training.show_training_info()
+    print(info.get_message())
 
 
 if __name__ == '__main__':
